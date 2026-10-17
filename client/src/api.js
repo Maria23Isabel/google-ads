@@ -1,10 +1,29 @@
+// Con VITE_STATIC=1 (GitHub Pages, sin servidor) el catálogo y los filtros corren en el navegador,
+// con el mismo código que usa la API de Node.
+const ESTATICO = import.meta.env.VITE_STATIC === '1';
+const repositorio = () => import('../../server/src/repositorio.js');
+
 export async function getCategorias() {
+  if (ESTATICO) return (await repositorio()).obtenerCategorias();
   const r = await fetch('/api/categorias');
   if (!r.ok) throw new Error('No se pudieron cargar las categorías');
   return r.json();
 }
 
 export async function getProductos(f, signal) {
+  if (ESTATICO) {
+    return (await repositorio()).obtenerProductos({
+      categoria: f.cat,
+      sub: f.sub.join(','),
+      marca: f.marca.join(','),
+      attrs: f.attrs,
+      q: f.q,
+      min: f.min === '' ? undefined : Number(f.min),
+      max: f.max === '' ? undefined : Number(f.max),
+      oferta: f.oferta,
+      orden: f.orden,
+    });
+  }
   const qs = new URLSearchParams({ categoria: f.cat });
   if (f.sub.length) qs.set('sub', f.sub.join(','));
   if (f.marca.length) qs.set('marca', f.marca.join(','));
@@ -31,6 +50,7 @@ export function capturaUtm() {
 }
 
 export function registraClic(productoId, tienda, utm) {
+  if (ESTATICO) return; // sin servidor no hay dónde registrarlo
   const cuerpo = new Blob([JSON.stringify({ productoId, tienda, utm })], { type: 'application/json' });
   navigator.sendBeacon?.('/api/clics', cuerpo);
 }
